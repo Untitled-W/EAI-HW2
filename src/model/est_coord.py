@@ -165,7 +165,7 @@ class EstCoordNet(nn.Module):
 
         # Compute the translation vector
         # t = pred_centroid - torch.bmm(R, pc_centroid.transpose(1,2)).transpose(1, 2)
-        t = pred_centroid -torch.bmm(R, pc.transpose(1, 2)).transpose(1, 2).mean(dim=1)
+        t = pred_centroid.squeenze(1) -torch.bmm(R, pc.transpose(1, 2)).transpose(1, 2).mean(dim=1)
         print(t.shape)
 
         return t.squeeze(1), R  # (B, 3), (B, 3, 3)
