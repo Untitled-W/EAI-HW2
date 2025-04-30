@@ -162,13 +162,8 @@ class EstCoordNet(nn.Module):
             det_UVt
         ], dim=-1))
         R = U.matmul(D).matmul(Vt)
-        print("R", R.shape)
 
         # Compute the translation vector
-        t = pred_centroid - torch.bmm(R, pc_centroid)
+        t = pred_centroid - torch.bmm(R, pc_centroid.transpose(1,2)).transpose(1, 2)
 
-        # Reshape rotation matrix and translation vector for batch output
-        trans = t.view(1, 3)
-        rot = R.view(1, 3, 3)
-
-        return t.squeeze(1), R.squeeze(1)  # (B, 3), (B, 3, 3)
+        return t.squeeze(1), R  # (B, 3), (B, 3, 3)
