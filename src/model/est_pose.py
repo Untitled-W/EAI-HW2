@@ -145,13 +145,17 @@ class EstPoseNet(nn.Module):
         ], dim=-1))
         pred_rot = U.matmul(D).matmul(Vt)
 
-
+        trans_loss = self.trans_loss(pred_trans, trans)
+        rot_loss = self.rot_loss(pred_rot, rot)
+        
         # Compute the loss
-        loss = self.config.trans_loss * self.trans_loss(pred_trans, trans) + \
-                self.config.rot_loss * self.rot_loss(pred_rot, rot)
+        loss = self.config.trans_loss * trans_loss + \
+                self.config.rot_loss * rot_loss
              
         metric = dict(
             loss=loss,
+            trans_loss=trans_loss,
+            rot_loss=rot_loss,
             # additional metrics you want to log
         )
         return loss, metric
