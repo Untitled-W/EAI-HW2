@@ -78,6 +78,7 @@ class EstPoseNet(nn.Module):
         Dict[str, float]
             A dictionary containing additional metrics you want to log
         """
+        
         # Encode the point cloud and get translation and rotation
         x = self.mlp1(pc)
         x = torch.max(x, dim=-2)[0]
@@ -85,6 +86,8 @@ class EstPoseNet(nn.Module):
         pred_trans, pred_rot = x[:, :3], x[:, 3:].view(-1, 3, 3)
         
         # Use SVD to get the rotation matrix
+        if torch.isnan(pred_rot).any():
+            raise ValueError("Input contains NaN values")
         U, _, Vt = torch.linalg.svd(pred_rot)
         pred_rot = torch.matmul(U, Vt)
         # Ensure the determinant of the rotation matrix is 1
