@@ -10,7 +10,7 @@ import time
 
 @dataclass
 class Config:
-    model_type: str = None
+    model_type: str = ""
     """can be est_pose or est_coord"""
     exp_name: str = time.strftime("%H-%M") + "_" + model_type
     """if exp_name is debug, it won't be logged in wandb"""
