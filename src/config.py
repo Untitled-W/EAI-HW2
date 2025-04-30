@@ -24,7 +24,7 @@ class Config:
     """the maximum number of iterations"""
     batch_size: int = 16
     """the batch size for training"""
-    learning_rate: float = 1e-3
+    learning_rate: float = 1e-4
     """maximum (and initial) learning rates"""
     learning_rate_min: float = 1e-8
     """we use cosine decay for learning rate, and this is the minimum (and final) learning rate"""
