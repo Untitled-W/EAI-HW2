@@ -40,11 +40,11 @@ class Config:
     """how many workers to use for data loading, if you are debugging, use 0 so that it won't create new processes"""
     seed: int = 0
     """the random seed for training"""
-    device: str = "cpu"
+    device: str = "cuda"
     """the device to use for training, you can use cuda:0 if you have a gpu"""
     point_num: int = 1024
     """number of points sampled from the full observation point cloud"""
-    trans_loss: float = 1.0
+    trans_loss: float = 0.4
     """weight for translation loss"""
     rot_loss: float = 3.0
     """weight for rotation loss"""

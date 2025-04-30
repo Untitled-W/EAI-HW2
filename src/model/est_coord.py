@@ -139,7 +139,7 @@ class EstCoordNet(nn.Module):
         x_4_input = torch.cat((x_1, x_3_expanded), dim=-2)
         x_4 = self.mlp2(x_4_input)
         pred_coord = x_4.permute(0, 2, 1)  # (B, N, 3)
-        pc = pc.permute(0, 2, 1)  # (B, N, 3)
+        pc = pc.permute(0, 2, 1)
         
         # Compute the centroid of the predicted coordinates and the input point cloud
         pred_centroid = pred_coord.mean(dim=1, keepdim=True)
@@ -152,6 +152,7 @@ class EstCoordNet(nn.Module):
         # Compute the covariance matrix
         covariance_matrix = torch.bmm(pc_centered.transpose(1, 2), pred_centered)
 
+        # Perform Singular Value Decomposition (SVD)
         U, S, Vt = torch.linalg.svd(covariance_matrix, full_matrices=False)
         UVt = U.matmul(Vt)
         det_UVt = torch.linalg.det(UVt)
@@ -161,9 +162,13 @@ class EstCoordNet(nn.Module):
             det_UVt
         ], dim=-1))
         R = U.matmul(D).matmul(Vt)
-        print(R.shape, pc_centroid.shape)
 
         # Compute the translation vector
         t = pred_centroid - torch.bmm(R, pc_centroid)
+        t = pred_centroid - torch.bmm(R, pc_centroid)
+
+        # Reshape rotation matrix and translation vector for batch output
+        trans = t.view(1, 3)
+        rot = R.view(1, 3, 3)
 
         return t.squeeze(1), R.squeeze(1)  # (B, 3), (B, 3, 3)
