@@ -18,9 +18,28 @@ class EstCoordNet(nn.Module):
         super().__init__()
         self.config = config
         
+        self.linear1 = nn.Sequential(
+            nn.Linear(3, 64),
+            nn.ReLU(),
+        )
+        self.mlp1 = nn.Sequential(
+            nn.Linear(64, 128),
+            nn.ReLU(),
+            nn.Linear(128, 256),
+            nn.ReLU(),
+        )
+        self.mlp2 = nn.Sequential(
+            nn.Linear(256+64, 512),
+            nn.ReLU(),
+            nn.Linear(512, 256),
+            nn.ReLU(),
+            nn.Linear(256, 128),
+            nn.ReLU(),
+            nn.Linear(128, 3),
+        )
         
+        self.loss = nn.MSELoss()
         
-
     def forward(
         self, pc: torch.Tensor, coord: torch.Tensor, **kwargs
     ) -> Tuple[float, Dict[str, float]]:
@@ -42,7 +61,15 @@ class EstCoordNet(nn.Module):
             A dictionary containing additional metrics you want to log
         """
         
+        x_1 = self.linear1(pc)
+        x_2 = self.mlp1(x_1)
+        x_3 = torch.max(x_2, dim=-2)[0]
+        x_3_expanded = x_3.unsqueeze(1).expand(-1, x_1.size(1), -1)
+        x_4_input = torch.cat((x_1, x_3_expanded), dim=-1)
+        x_4 = self.mlp2(x_4_input)
+        pred_coord = x_4.view(-1, 3)
         
+        loss = self.loss(pred_coord, coord.view(-1, 3))
 
         metric = dict(
             loss=loss,
@@ -74,4 +101,42 @@ class EstCoordNet(nn.Module):
 
         The only requirement is that the input and output should be torch tensors on the same device and with the same dtype.
         """
-        raise NotImplementedError("You need to implement the est function")
+
+        x_1 = self.linear1(pc)
+        x_2 = self.mlp1(x_1)
+        x_3 = torch.max(x_2, dim=-2)[0]
+        x_3_expanded = x_3.unsqueeze(1).expand(-1, x_1.size(1), -1)
+        x_4_input = torch.cat((x_1, x_3_expanded), dim=-1)
+        x_4 = self.mlp2(x_4_input)
+        pred_coord = x_4.view(-1, 3)
+        
+        # Compute the centroid of the predicted coordinates and the input point cloud
+        pred_centroid = pred_coord.mean(dim=0)
+        pc_centroid = pc.view(-1, 3).mean(dim=0)
+
+        # Center the predicted coordinates and the input point cloud
+        pred_centered = pred_coord - pred_centroid
+        pc_centered = pc.view(-1, 3) - pc_centroid
+
+        # Compute the covariance matrix
+        covariance_matrix = torch.mm(pc_centered.T, pred_centered)
+
+        # Perform Singular Value Decomposition (SVD)
+        U, S, Vt = torch.svd(covariance_matrix)
+
+        # Compute the rotation matrix
+        R = torch.mm(U, Vt.T)
+
+        # Ensure the rotation matrix is a proper rotation matrix (det(R) = 1)
+        if torch.det(R) < 0:
+            U[:, -1] *= -1
+            R = torch.mm(U, Vt.T)
+
+        # Compute the translation vector
+        t = pred_centroid - torch.mm(pc_centroid.unsqueeze(0), R).squeeze(0)
+
+        # Reshape rotation matrix and translation vector for batch output
+        trans = t.view(1, 3)
+        rot = R.view(1, 3, 3)
+
+        return trans, rot

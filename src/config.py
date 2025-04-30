@@ -1,6 +1,7 @@
 from dataclasses import dataclass, field  # type: ignore
 import numpy as np
 import yaml
+import time
 
 # You can modify Config according to your need
 # if you add some non-hashable types like list or dict, you need to use field
@@ -11,7 +12,7 @@ import yaml
 class Config:
     model_type: str = None
     """can be est_pose or est_coord"""
-    exp_name: str = "debug"
+    exp_name: str = time.strftime("%H-%M")
     """if exp_name is debug, it won't be logged in wandb"""
     robot: str = "galbot"
     """the robot we are using"""
@@ -21,7 +22,7 @@ class Config:
     """if not None, then we will continue training from this checkpoint"""
     max_iter: int = 10000
     """the maximum number of iterations"""
-    batch_size: int = 256
+    batch_size: int = 16
     """the batch size for training"""
     learning_rate: float = 1e-3
     """maximum (and initial) learning rates"""
