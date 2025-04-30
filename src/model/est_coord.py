@@ -161,7 +161,7 @@ class EstCoordNet(nn.Module):
             det_UVt
         ], dim=-1))
         R = U.matmul(D).matmul(Vt)
-        print(R.shape, pc_centered.shape)
+        print(R.shape, pc_centroid.shape)
 
         # Compute the translation vector
         t = pred_centroid - torch.bmm(R, pc_centroid)
