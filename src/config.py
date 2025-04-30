@@ -12,7 +12,7 @@ import time
 class Config:
     model_type: str = None
     """can be est_pose or est_coord"""
-    exp_name: str = time.strftime("%H-%M")
+    exp_name: str = time.strftime("%H-%M") + "_" + model_type
     """if exp_name is debug, it won't be logged in wandb"""
     robot: str = "galbot"
     """the robot we are using"""

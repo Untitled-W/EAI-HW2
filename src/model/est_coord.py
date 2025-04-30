@@ -92,12 +92,12 @@ class EstCoordNet(nn.Module):
         x_1 = self.linear1(pc)
         x_2 = self.mlp1(x_1)
         x_3 = torch.max(x_2, dim=-1, keepdim=True)[0]
-        x_3_expanded = x_3.expand(-1, -1, x_1.size(1))
-        x_4_input = torch.cat((x_1, x_3_expanded), dim=-1)
+        x_3_expanded = x_3.expand(-1, -1, x_1.size(-1))
+        x_4_input = torch.cat((x_1, x_3_expanded), dim=-2)
         x_4 = self.mlp2(x_4_input)
         pred_coord = x_4.permute(0, 2, 1)  # (B, N, 3)
         
-        loss = self.loss(pred_coord, coord.view(-1, 3))
+        loss = self.loss(pred_coord, coord)
 
         metric = dict(
             loss=loss,
@@ -135,8 +135,8 @@ class EstCoordNet(nn.Module):
         x_1 = self.linear1(pc)
         x_2 = self.mlp1(x_1)
         x_3 = torch.max(x_2, dim=-1, keepdim=True)[0]
-        x_3_expanded = x_3.expand(-1, -1, x_1.size(1))
-        x_4_input = torch.cat((x_1, x_3_expanded), dim=-1)
+        x_3_expanded = x_3.expand(-1, -1, x_1.size(-1))
+        x_4_input = torch.cat((x_1, x_3_expanded), dim=-2)
         x_4 = self.mlp2(x_4_input)
         pred_coord = x_4.permute(0, 2, 1)  # (B, N, 3)
         
