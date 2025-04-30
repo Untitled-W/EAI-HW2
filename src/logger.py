@@ -31,10 +31,10 @@ class Logger:
         we don't log anything in wandb
         """
         self.exp_name = config.exp_name
-        if self.exp_name != "debug":
-            wandb.init(project="Intro2EAI", name=self.exp_name, config=asdict(config))
-        else:
-            warnings.warn("exp_name is debug, so we don't log anything in wandb")
+        # if self.exp_name != "debug":
+        #     wandb.init(project="Intro2EAI", name=self.exp_name, config=asdict(config))
+        # else:
+        #     warnings.warn("exp_name is debug, so we don't log anything in wandb")
 
         # create exp directory
         os.makedirs(get_exp_dir(self.exp_name), exist_ok=True)
@@ -55,8 +55,8 @@ class Logger:
 
         step is the iteration number
         """
-        if self.exp_name != "debug":
-            wandb.log({f"{mode}/{k}": v for k, v in dic.items()}, step=step)
+        # if self.exp_name != "debug":
+        #     wandb.log({f"{mode}/{k}": v for k, v in dic.items()}, step=step)
 
     def save(self, dic: dict, step: int):
         """
