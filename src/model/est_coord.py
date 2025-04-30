@@ -18,24 +18,50 @@ class EstCoordNet(nn.Module):
         super().__init__()
         self.config = config
         
+        # self.linear1 = nn.Sequential(
+        #     nn.Linear(3, 64),
+        #     nn.ReLU(),
+        # )
         self.linear1 = nn.Sequential(
-            nn.Linear(3, 64),
-            nn.ReLU(),
+            nn.Conv1d(3, 64, 1, bias=False),
+            nn.BatchNorm1d(64),
+            nn.ReLU(inplace=True),
         )
+        # 3--64--128--256
+        # self.mlp1 = nn.Sequential(
+        #     nn.Linear(64, 128),
+        #     nn.ReLU(),
+        #     nn.Linear(128, 256),
+        #     nn.ReLU(),
+        # )
         self.mlp1 = nn.Sequential(
-            nn.Linear(64, 128),
-            nn.ReLU(),
-            nn.Linear(128, 256),
-            nn.ReLU(),
+            nn.Conv1d(64, 128, 1, bias=False),
+            nn.BatchNorm1d(128),
+            nn.ReLU(inplace=True),
+            nn.Conv1d(128, 256, 1, bias=False),
+            nn.BatchNorm1d(256),
+            nn.ReLU(inplace=True)
         )
+        # self.mlp2 = nn.Sequential(
+        #     nn.Linear(256+64, 512),
+        #     nn.ReLU(),
+        #     nn.Linear(512, 256),
+        #     nn.ReLU(),
+        #     nn.Linear(256, 128),
+        #     nn.ReLU(),
+        #     nn.Linear(128, 3),
+        # )
         self.mlp2 = nn.Sequential(
-            nn.Linear(256+64, 512),
-            nn.ReLU(),
-            nn.Linear(512, 256),
-            nn.ReLU(),
-            nn.Linear(256, 128),
-            nn.ReLU(),
-            nn.Linear(128, 3),
+            nn.Conv1d(256+64, 512, 1, bias=False),
+            nn.BatchNorm1d(512),
+            nn.ReLU(inplace=True),
+            nn.Conv1d(512, 256, 1, bias=False),
+            nn.BatchNorm1d(256),
+            nn.ReLU(inplace=True),
+            nn.Conv1d(256, 128, 1, bias=False),
+            nn.BatchNorm1d(128),
+            nn.ReLU(inplace=True),
+            nn.Conv1d(128, 3, 1, bias=False)
         )
         
         self.loss = nn.MSELoss()
@@ -61,13 +87,15 @@ class EstCoordNet(nn.Module):
             A dictionary containing additional metrics you want to log
         """
         
+        # pc: (B, N, 3) -> (B, 3, N)
+        pc = pc.permute(0, 2, 1)
         x_1 = self.linear1(pc)
         x_2 = self.mlp1(x_1)
-        x_3 = torch.max(x_2, dim=-2)[0]
-        x_3_expanded = x_3.unsqueeze(1).expand(-1, x_1.size(1), -1)
+        x_3 = torch.max(x_2, dim=-1, keepdim=True)[0]
+        x_3_expanded = x_3.expand(-1, -1, x_1.size(1))
         x_4_input = torch.cat((x_1, x_3_expanded), dim=-1)
         x_4 = self.mlp2(x_4_input)
-        pred_coord = x_4.view(-1, 3)
+        pred_coord = x_4.permute(0, 2, 1)  # (B, N, 3)
         
         loss = self.loss(pred_coord, coord.view(-1, 3))
 
@@ -102,21 +130,23 @@ class EstCoordNet(nn.Module):
         The only requirement is that the input and output should be torch tensors on the same device and with the same dtype.
         """
 
+        # pc: (B, N, 3) -> (B, 3, N)
+        pc = pc.permute(0, 2, 1)
         x_1 = self.linear1(pc)
         x_2 = self.mlp1(x_1)
-        x_3 = torch.max(x_2, dim=-2)[0]
-        x_3_expanded = x_3.unsqueeze(1).expand(-1, x_1.size(1), -1)
+        x_3 = torch.max(x_2, dim=-1, keepdim=True)[0]
+        x_3_expanded = x_3.expand(-1, -1, x_1.size(1))
         x_4_input = torch.cat((x_1, x_3_expanded), dim=-1)
         x_4 = self.mlp2(x_4_input)
-        pred_coord = x_4.view(-1, 3)
+        pred_coord = x_4.permute(0, 2, 1)  # (B, N, 3)
         
         # Compute the centroid of the predicted coordinates and the input point cloud
-        pred_centroid = pred_coord.mean(dim=0)
-        pc_centroid = pc.view(-1, 3).mean(dim=0)
+        pred_centroid = pred_coord.mean(dim=1)
+        pc_centroid = pc.mean(dim=1)
 
         # Center the predicted coordinates and the input point cloud
         pred_centered = pred_coord - pred_centroid
-        pc_centered = pc.view(-1, 3) - pc_centroid
+        pc_centered = pc - pc_centroid
 
         # Compute the covariance matrix
         covariance_matrix = torch.mm(pc_centered.T, pred_centered)
