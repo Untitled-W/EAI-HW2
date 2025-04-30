@@ -1,0 +1,68 @@
+Commit ID: cc49df3a117c57bda5dc2ba8488b90b841b8cf02
+
+
+
+On branch xyz
+Your branch is up to date with 'origin/xyz'.
+
+Changes not staged for commit:
+  (use "git add <file>..." to update what will be committed)
+  (use "git restore <file>..." to discard changes in working directory)
+	modified:   src/config.py
+	modified:   src/model/est_coord.py
+	modified:   train.py
+
+no changes added to commit (use "git add" and/or "git commit -a")
+
+
+diff --git a/src/config.py b/src/config.py
+index d25f57c..5e016e3 100644
+--- a/src/config.py
++++ b/src/config.py
+@@ -44,7 +44,7 @@ class Config:
+     """the device to use for training, you can use cuda:0 if you have a gpu"""
+     point_num: int = 1024
+     """number of points sampled from the full observation point cloud"""
+-    trans_loss: float = 1.0
++    trans_loss: float = 0.4
+     """weight for translation loss"""
+     rot_loss: float = 3.0
+     """weight for rotation loss"""
+diff --git a/src/model/est_coord.py b/src/model/est_coord.py
+index 39cd8fc..1d70576 100644
+--- a/src/model/est_coord.py
++++ b/src/model/est_coord.py
+@@ -92,12 +92,12 @@ class EstCoordNet(nn.Module):
+         x_1 = self.linear1(pc)
+         x_2 = self.mlp1(x_1)
+         x_3 = torch.max(x_2, dim=-1, keepdim=True)[0]
+-        x_3_expanded = x_3.expand(-1, -1, x_1.size(1))
+-        x_4_input = torch.cat((x_1, x_3_expanded), dim=-1)
++        x_3_expanded = x_3.expand(-1, -1, x_1.size(-1))
++        x_4_input = torch.cat((x_1, x_3_expanded), dim=-2)
+         x_4 = self.mlp2(x_4_input)
+         pred_coord = x_4.permute(0, 2, 1)  # (B, N, 3)
+         
+-        loss = self.loss(pred_coord, coord.view(-1, 3))
++        loss = self.loss(pred_coord, coord)
+ 
+         metric = dict(
+             loss=loss,
+diff --git a/train.py b/train.py
+index 6f3f365..67eb6f2 100644
+--- a/train.py
++++ b/train.py
+@@ -96,6 +96,11 @@ def main():
+         checkpoint = torch.load(config.checkpoint, map_location="cpu")
+         model.load_state_dict(checkpoint["model"])
+         optimizer.load_state_dict(checkpoint["optimizer"])
++        for state in optimizer.state.values():
++            if isinstance(state, dict):
++                for k, v in state.items():
++                    if isinstance(v, torch.Tensor):
++                        state[k] = v.to(device)
+         cur_iter = checkpoint["iter"]
+         for _ in range(cur_iter):
+             scheduler.step()
+
+
